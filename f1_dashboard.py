@@ -111,11 +111,18 @@ def fetch_races(year):
     return schedule
 
 
+
 # Function to fetch session data for a specific race
 def fetch_session_data(year, race_name):
-    session = ff1.get_session(year, race_name, "R")  # Race session
-    session.load()
-    return session
+    try:
+        session = ff1.get_session(year, race_name, "R")  # Race session
+        session.load()
+        has_data = not session.laps.empty  # Check if session has lap data
+        
+        return session, has_data
+    except Exception as e:
+        st.error(f"Error fetching session data: {e}")
+        return None, False
 
 
 # Function to get driver names with their numbers
@@ -529,35 +536,39 @@ def main():
     selected_race = st.sidebar.selectbox("Select Race", race_names)
 
     # Fetch session data for the selected race
-    session = fetch_session_data(year, selected_race)
-
-    # Display race details
-    st.header(f"{selected_race} - {year}")
-    st.write(f"Race Date: {session.event['EventDate']}")
-    st.write(f"Track: {session.event['Location']}")
-
-    # Driver selection
-    driver_info = get_driver_names_with_numbers(session)
-    selected_driver_info = st.selectbox("Select Driver", driver_info)
+    session, has_data = fetch_session_data(year, selected_race)
     
-    draw_track_map(session)  # Track map with numbered corners
+    if not has_data:
+        st.warning("No data available for the selected race. Please choose another race.")
+    else:
+
+        # Display race details
+        st.header(f"{selected_race} - {year}")
+        st.write(f"Race Date: {session.event['EventDate']}")
+        st.write(f"Track: {session.event['Location']}")
+
+        # Driver selection
+        driver_info = get_driver_names_with_numbers(session)
+        selected_driver_info = st.selectbox("Select Driver", driver_info)
+        
+        draw_track_map(session)  # Track map with numbered corners
 
 
-    # Create a grid layout for graphs
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        create_telemetry_plots(session, selected_driver_info)
-        create_sector_time_analysis(session, selected_driver_info)
-        create_fuel_usage_analysis(session, selected_driver_info)  # Fuel usage analysis
-        create_lap_time_scatterplot(session)  # Lap time scatterplot
+        # Create a grid layout for graphs
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            create_telemetry_plots(session, selected_driver_info)
+            create_sector_time_analysis(session, selected_driver_info)
+            create_fuel_usage_analysis(session, selected_driver_info)  # Fuel usage analysis
+            create_lap_time_scatterplot(session)  # Lap time scatterplot
 
-    with col2:
-        create_lap_time_analysis(session)
-        create_tire_usage_analysis(session)
-        create_pit_stop_analysis(session)
-        create_position_change_analysis(session)
-        create_weather_analysis(session)  # Weather analysis
+        with col2:
+            create_lap_time_analysis(session)
+            create_tire_usage_analysis(session)
+            create_pit_stop_analysis(session)
+            create_position_change_analysis(session)
+            create_weather_analysis(session)  # Weather analysis
 
 
 if __name__ == "__main__":
