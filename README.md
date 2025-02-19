@@ -16,7 +16,7 @@ This **Formula One Dashboard** is an interactive **Streamlit application** that 
 ## Installation
 1. Clone the repository:
    ```sh
-   git clone https://github.com/yourusername/f1-dashboard.git
+   git clone https://github.com/mahykane/f1-dashboard.git
    cd f1-dashboard
    ```
 
@@ -27,7 +27,7 @@ This **Formula One Dashboard** is an interactive **Streamlit application** that 
 
 3. Run the application:
    ```sh
-   streamlit run app.py
+   streamlit run f1_dashboard.py
    ```
 
 ## Usage
@@ -49,5 +49,5 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 This project is licensed under the MIT License.
 
 ## Author
-Your Name - [GitHub Profile](https://github.com/yourusername)
+Mahy KANE - [GitHub Profile](https://github.com/mahykane)
 
