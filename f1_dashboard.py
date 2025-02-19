@@ -527,13 +527,12 @@ def main():
     # Sidebar for year selection
     st.sidebar.title("Filters")
     year = st.sidebar.selectbox("Select Year", range(2025, 2020, -1))
-    round_number = st.sidebar.number_input("Select Round", min_value=1, max_value=22, value=15)
-
     # Fetch all races for the selected year
     schedule = fetch_races(year)
     st.sidebar.write(f"Races in {year}:")
     race_names = schedule.EventName.tolist()
     selected_race = st.sidebar.selectbox("Select Race", race_names)
+
 
     # Fetch session data for the selected race
     session, has_data = fetch_session_data(year, selected_race)
