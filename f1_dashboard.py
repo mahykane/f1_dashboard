@@ -13,8 +13,226 @@ if not os.path.exists("cache"):
     os.mkdir("cache")
 ff1.Cache.enable_cache("cache")
 
+# Set page title and layout
+st.set_page_config(page_title="Formula One Dashboard", page_icon="🏎️", layout="wide")
+
 # Set up FastF1 plotting
 plotting.setup_mpl()
+
+DRIVER_IMAGES = {
+    "Max Verstappen": "https://www.formula1.com/content/dam/fom-website/drivers/2025/max-verstappen.jpg",
+    "Liam Lawson": "https://www.formula1.com/content/dam/fom-website/drivers/2025/liam-lawson.jpg",
+    "Lewis Hamilton": "https://www.formula1.com/content/dam/fom-website/drivers/2025/lewis-hamilton.jpg",
+    "Charles Leclerc": "https://www.formula1.com/content/dam/fom-website/drivers/2025/charles-leclerc.jpg",
+    "George Russell": "https://www.formula1.com/content/dam/fom-website/drivers/2025/george-russell.jpg",
+    "Andrea Kimi Antonelli": "https://www.formula1.com/content/dam/fom-website/drivers/2025/andrea-kimi-antonelli.jpg",
+    "Lando Norris": "https://www.formula1.com/content/dam/fom-website/drivers/2025/lando-norris.jpg",
+    "Oscar Piastri": "https://www.formula1.com/content/dam/fom-website/drivers/2025/oscar-piastri.jpg",
+    "Fernando Alonso": "https://www.formula1.com/content/dam/fom-website/drivers/2025/fernando-alonso.jpg",
+    "Lance Stroll": "https://www.formula1.com/content/dam/fom-website/drivers/2025/lance-stroll.jpg",
+    "Pierre Gasly": "https://www.formula1.com/content/dam/fom-website/drivers/2025/pierre-gasly.jpg",
+    "Jack Doohan": "https://www.formula1.com/content/dam/fom-website/drivers/2025/jack-doohan.jpg",
+    "Esteban Ocon": "https://www.formula1.com/content/dam/fom-website/drivers/2025/esteban-ocon.jpg",
+    "Oliver Bearman": "https://www.formula1.com/content/dam/fom-website/drivers/2025/oliver-bearman.jpg",
+    "Nico Hülkenberg": "https://www.formula1.com/content/dam/fom-website/drivers/2025/nico-hulkenberg.jpg",
+    "Gabriel Bortoleto": "https://www.formula1.com/content/dam/fom-website/drivers/2025/gabriel-bortoleto.jpg",
+    "Isack Hadjar": "https://www.formula1.com/content/dam/fom-website/drivers/2025/isack-hadjar.jpg",
+    "Yuki Tsunoda": "https://www.formula1.com/content/dam/fom-website/drivers/2025/yuki-tsunoda.jpg",
+    "Carlos Sainz Jr.": "https://www.formula1.com/content/dam/fom-website/drivers/2025/carlos-sainz.jpg",
+    "Alexander Albon": "https://www.formula1.com/content/dam/fom-website/drivers/2025/alexander-albon.jpg",
+}
+
+
+track_info = {
+    "Bahrain International Circuit": {
+        "length_km": 5.412,
+        "corners": 15,
+        "location": "Sakhir",
+        "country": "Bahrain",
+        "history": "The Bahrain International Circuit has hosted the Bahrain Grand Prix since 2004. Known for its desert setting, the track features multiple layout variations and is often subject to strong winds and sand.",
+    },
+    "Jeddah Corniche Circuit": {
+        "length_km": 6.174,
+        "corners": 27,
+        "location": "Jeddah",
+        "country": "Saudi Arabia",
+        "history": "Introduced in 2021, Jeddah Corniche Circuit is one of the fastest street circuits in Formula 1, with an average speed exceeding 250 km/h.",
+    },
+    "Albert Park Circuit": {
+        "length_km": 5.278,
+        "corners": 14,
+        "location": "Melbourne",
+        "country": "Australia",
+        "history": "Since 1996, Albert Park Circuit has hosted the Australian Grand Prix. The semi-permanent track combines public roads and racing infrastructure.",
+    },
+    "Baku City Circuit": {
+        "length_km": 6.003,
+        "corners": 20,
+        "location": "Baku",
+        "country": "Azerbaijan",
+        "history": "Debuting in 2016, the Baku City Circuit is famous for its long straights and tight corners near the historic old city walls.",
+    },
+    "Miami International Autodrome": {
+        "length_km": 5.412,
+        "corners": 19,
+        "location": "Miami Gardens, Florida",
+        "country": "USA",
+        "history": "First held in 2022, the Miami Grand Prix is set around the Hard Rock Stadium, featuring a mix of high-speed sections and technical corners.",
+    },
+    "Imola Circuit": {
+        "length_km": 4.909,
+        "corners": 19,
+        "location": "Imola",
+        "country": "Italy",
+        "history": "Hosting the Emilia Romagna Grand Prix, Imola is a historic track famous for its challenging layout and was once the home of the San Marino GP.",
+    },
+    "Circuit de Monaco": {
+        "length_km": 3.337,
+        "corners": 19,
+        "location": "Monte Carlo",
+        "country": "Monaco",
+        "history": "The most prestigious race on the calendar, first held in 1929, known for its tight layout and minimal overtaking opportunities.",
+    },
+    "Circuit de Barcelona-Catalunya": {
+        "length_km": 4.675,
+        "corners": 16,
+        "location": "Montmeló, Catalonia",
+        "country": "Spain",
+        "history": "Opened in 1991, this track is a favorite testing venue due to its mix of high-speed and technical corners.",
+    },
+    "Circuit Gilles Villeneuve": {
+        "length_km": 4.361,
+        "corners": 14,
+        "location": "Montreal",
+        "country": "Canada",
+        "history": "Hosting the Canadian Grand Prix since 1978, the track is known for high-speed straights and the 'Wall of Champions' chicane.",
+    },
+    "Red Bull Ring": {
+        "length_km": 4.318,
+        "corners": 10,
+        "location": "Spielberg",
+        "country": "Austria",
+        "history": "A short yet fast track known for its elevation changes and minimal braking zones.",
+    },
+    "Silverstone Circuit": {
+        "length_km": 5.891,
+        "corners": 18,
+        "location": "Silverstone",
+        "country": "United Kingdom",
+        "history": "The site of the first-ever Formula One World Championship race in 1950, Silverstone remains one of the most iconic circuits.",
+    },
+    "Hungaroring": {
+        "length_km": 4.381,
+        "corners": 14,
+        "location": "Mogyoród",
+        "country": "Hungary",
+        "history": "Hosting the Hungarian GP since 1986, this twisty circuit is known for being one of the hardest to overtake on.",
+    },
+    "Circuit de Spa-Francorchamps": {
+        "length_km": 7.004,
+        "corners": 19,
+        "location": "Stavelot",
+        "country": "Belgium",
+        "history": "One of the most legendary circuits in F1, Spa has been a part of the championship since 1950. Known for its elevation changes and unpredictable weather.",
+    },
+    "Circuit Zandvoort": {
+        "length_km": 4.259,
+        "corners": 14,
+        "location": "Zandvoort",
+        "country": "Netherlands",
+        "history": "The home of the Dutch Grand Prix, featuring banked corners and a tight, flowing layout.",
+    },
+    "Autodromo Nazionale Monza": {
+        "length_km": 5.793,
+        "corners": 11,
+        "location": "Monza",
+        "country": "Italy",
+        "history": "Known as the 'Temple of Speed,' Monza is the fastest circuit on the calendar, featuring long straights and minimal cornering.",
+    },
+    "Marina Bay Street Circuit": {
+        "length_km": 4.940,
+        "corners": 19,
+        "location": "Marina Bay",
+        "country": "Singapore",
+        "history": "Since 2008, Marina Bay has hosted F1’s first night race, creating a spectacular atmosphere under the city lights.",
+    },
+    "Suzuka International Racing Course": {
+        "length_km": 5.807,
+        "corners": 18,
+        "location": "Suzuka",
+        "country": "Japan",
+        "history": "A figure-eight layout and home to some of F1’s greatest title showdowns since its debut in 1987.",
+    },
+    "Lusail International Circuit": {
+        "length_km": 5.419,
+        "corners": 16,
+        "location": "Lusail",
+        "country": "Qatar",
+        "history": "Hosting the Qatar GP since 2021, this track is primarily used for MotoGP but offers a fast and flowing layout for F1.",
+    },
+    "Circuit of the Americas": {
+        "length_km": 5.513,
+        "corners": 20,
+        "location": "Austin, Texas",
+        "country": "USA",
+        "history": "Opened in 2012, COTA brought F1 back to the USA, featuring significant elevation changes and technical corners.",
+    },
+    "Autódromo Hermanos Rodríguez": {
+        "length_km": 4.304,
+        "corners": 17,
+        "location": "Mexico City",
+        "country": "Mexico",
+        "history": "Hosting the Mexican Grand Prix, the track is notable for its high altitude and famous stadium section.",
+    },
+    "Interlagos (Autódromo José Carlos Pace)": {
+        "length_km": 4.309,
+        "corners": 15,
+        "location": "São Paulo",
+        "country": "Brazil",
+        "history": "One of F1’s most beloved circuits, Interlagos has produced legendary races and title-deciding moments.",
+    },
+    "Las Vegas Strip Circuit": {
+        "length_km": 6.2,
+        "corners": 17,
+        "location": "Las Vegas",
+        "country": "USA",
+        "history": "F1’s return to Las Vegas in 2023, featuring a high-speed layout through the city’s iconic strip.",
+    },
+    "Yas Marina Circuit": {
+        "length_km": 5.281,
+        "corners": 16,
+        "location": "Abu Dhabi",
+        "country": "UAE",
+        "history": "Hosting the season finale, Yas Marina is known for its spectacular twilight races.",
+    },
+}
+
+
+grand_prix_to_circuit = {
+    "Bahrain Grand Prix": "Bahrain International Circuit",
+    "Saudi Arabian Grand Prix": "Jeddah Corniche Circuit",
+    "Australian Grand Prix": "Albert Park Circuit",
+    "Azerbaijan Grand Prix": "Baku City Circuit",
+    "Miami Grand Prix": "Miami International Autodrome",
+    "Emilia Romagna Grand Prix": "Imola Circuit",
+    "Monaco Grand Prix": "Circuit de Monaco",
+    "Spanish Grand Prix": "Circuit de Barcelona-Catalunya",
+    "Canadian Grand Prix": "Circuit Gilles Villeneuve",
+    "Austrian Grand Prix": "Red Bull Ring",
+    "British Grand Prix": "Silverstone Circuit",
+    "Hungarian Grand Prix": "Hungaroring",
+    "Belgian Grand Prix": "Circuit de Spa-Francorchamps",
+    "Dutch Grand Prix": "Circuit Zandvoort",
+    "Italian Grand Prix": "Autodromo Nazionale Monza",
+    "Singapore Grand Prix": "Marina Bay Street Circuit",
+    "Japanese Grand Prix": "Suzuka International Racing Course",
+    "Qatar Grand Prix": "Lusail International Circuit",
+    "United States Grand Prix": "Circuit of the Americas",
+    "Mexico City Grand Prix": "Autódromo Hermanos Rodríguez",
+    "São Paulo Grand Prix": "Interlagos (Autódromo José Carlos Pace)",
+    "Las Vegas Grand Prix": "Las Vegas Strip Circuit",
+    "Abu Dhabi Grand Prix": "Yas Marina Circuit",
+}
 
 
 def inject_custom_css():
@@ -54,13 +272,7 @@ def inject_custom_css():
                 background-color: #E51600;
             }
 
-            /* Plotly charts */
-            .stPlotlyChart {
-                border-radius: 15px;
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-                background-color: #2E2E2E;
-                padding: 1rem;
-            }
+        
 
             /* Tables */
             .stDataFrame {
@@ -73,14 +285,7 @@ def inject_custom_css():
             /* Custom font */
             @import url('https://fonts.googleapis.com/css2?family=Formula1&display=swap');
 
-            /* Containers */
-            .stContainer {
-                border-radius: 15px;
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-                background-color: #2E2E2E;
-                padding: 1rem;
-                margin-bottom: 1rem;
-            }
+            
 
             /* Markdown text */
             .stMarkdown {
@@ -105,11 +310,11 @@ def inject_custom_css():
         unsafe_allow_html=True,
     )
 
+
 # Function to fetch all races for a given year
 def fetch_races(year):
     schedule = ff1.get_event_schedule(year)
     return schedule
-
 
 
 # Function to fetch session data for a specific race
@@ -118,7 +323,7 @@ def fetch_session_data(year, race_name):
         session = ff1.get_session(year, race_name, "R")  # Race session
         session.load()
         has_data = not session.laps.empty  # Check if session has lap data
-        
+
         return session, has_data
     except Exception as e:
         st.error(f"Error fetching session data: {e}")
@@ -138,6 +343,11 @@ def get_driver_names_with_numbers(session):
 # Function to create telemetry plots
 def create_telemetry_plots(session, selected_driver_info):
     st.subheader("Telemetry Analysis")
+
+    st.write(
+        "This graph shows the driver's telemetry data, including **Speed, Throttle, Braking, Gear Changes, and DRS Usage** over a lap. "
+        "It helps analyze how a driver manages speed, braking zones, and acceleration."
+    )
     selected_driver = selected_driver_info.split("(")[-1].strip(")")
     lap = session.laps.pick_driver(selected_driver).pick_fastest()
     tel = lap.get_telemetry()
@@ -183,11 +393,88 @@ def create_telemetry_plots(session, selected_driver_info):
         tel, x="Distance", y="DRS", title=f"DRS Usage - {selected_driver_info}"
     )
     st.plotly_chart(fig_drs, use_container_width=True)
+    
+    
+    
+import streamlit as st
+import plotly.express as px
+import fastf1 as ff1
+import numpy as np
+
+def create_enhanced_telemetry_plots(session, selected_driver_info):
+    st.subheader("📊 Enhanced Telemetry Analysis")
+
+    st.write(
+        """
+        This section provides an in-depth analysis of the driver's telemetry data, including:
+        - **Speed**: Vehicle speed over the lap distance.
+        - **Throttle**: Throttle application as a percentage.
+        - **Brake**: Brake pressure indicating braking zones.
+        - **Gear**: Gear selection throughout the lap.
+        - **DRS**: Drag Reduction System activation points.
+        - **RPM**: Engine revolutions per minute.
+        - **Steering Angle**: Inferred from positional data.
+
+        These metrics help analyze driver behavior, car performance, and track characteristics.
+        """
+    )
+
+    # Extract driver identifier
+    selected_driver = selected_driver_info.split("(")[-1].strip(")")
+
+    # Load the fastest lap telemetry data
+    lap = session.laps.pick_driver(selected_driver).pick_fastest()
+    tel = lap.get_telemetry()
+
+    # Calculate Steering Angle
+    tel['delta_x'] = tel['X'].diff()
+    tel['delta_y'] = tel['Y'].diff()
+    tel['SteeringAngle'] = np.arctan2(tel['delta_y'], tel['delta_x']) * (180 / np.pi)
+
+    # Define telemetry parameters and their labels
+    telemetry_params = {
+        "Speed": "Speed (km/h)",
+        "Throttle": "Throttle (%)",
+        "Brake": "Brake Pressure",
+        "nGear": "Gear",
+        "DRS": "DRS Activation",
+        "RPM": "Engine RPM",
+        "SteeringAngle": "Steering Angle (°)"
+    }
+
+    # Create two columns for the graphs
+    col1, col2 = st.columns(2)
+
+    with col1:
+        for param, label in list(telemetry_params.items())[:4]:  # First four graphs
+            fig = px.line(
+                tel,
+                x="Distance",
+                y=param,
+                title=f"{label} vs Distance - {selected_driver_info}",
+                labels={"Distance": "Distance (m)", param: label}
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+    with col2:
+        for param, label in list(telemetry_params.items())[4:]:  # Last three graphs
+            fig = px.line(
+                tel,
+                x="Distance",
+                y=param,
+                title=f"{label} vs Distance - {selected_driver_info}",
+                labels={"Distance": "Distance (m)", param: label}
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
 
 # Function to create lap time analysis
 def create_lap_time_analysis(session):
     st.subheader("Lap Time Analysis")
+    st.write(
+        "This graph displays **lap times** for all drivers during the race. "
+        "It helps identify **race pace consistency, slow and fast laps, and strategy changes.**"
+    )
     laps = session.laps
     fig_lap_times = px.line(laps, x="LapNumber", y="LapTime", title="Lap Times")
     st.plotly_chart(fig_lap_times, use_container_width=True)
@@ -196,6 +483,10 @@ def create_lap_time_analysis(session):
 # Function to create tire usage analysis
 def create_tire_usage_analysis(session):
     st.subheader("Tire Usage Analysis")
+    st.write(
+        "This box plot compares **tire compounds and lap times**, showing which tires performed best. "
+        "It helps analyze strategy choices and how different compounds behave."
+    )
     laps = session.laps
     fig_tire_usage = px.box(laps, x="Compound", y="LapTime", title="Tire Usage")
     st.plotly_chart(fig_tire_usage, use_container_width=True)
@@ -204,6 +495,11 @@ def create_tire_usage_analysis(session):
 # Function to create sector time analysis
 def create_sector_time_analysis(session, selected_driver_info):
     st.subheader("Sector Time Analysis")
+
+    st.write(
+        "This graph breaks down lap times into **Sector 1, Sector 2, and Sector 3**. "
+        "It helps identify which parts of the track the driver is fastest or struggling."
+    )
     selected_driver = selected_driver_info.split("(")[-1].strip(")")
     laps = session.laps.pick_driver(selected_driver)
     sector_times = laps[["LapNumber", "Sector1Time", "Sector2Time", "Sector3Time"]]
@@ -226,7 +522,10 @@ def create_sector_time_analysis(session, selected_driver_info):
 # Function to create pit stop analysis
 def create_pit_stop_analysis(session):
     st.subheader("Pit Stop Analysis")
-
+    st.write(
+        "This chart shows **average pit stop durations** for each driver. "
+        "It helps compare how quickly teams execute pit stops and their impact on race positions."
+    )
     # Get laps data
     laps = session.laps
 
@@ -388,24 +687,24 @@ def create_lap_time_scatterplot(session):
 
 def who_can_win_wdc(year, round_number):
     st.subheader("Who Can Still Win the WDC?")
-    
+
     # Get the current driver standings
     ergast = Ergast()
     standings = ergast.get_driver_standings(season=year, round=round_number)
     if standings.content.empty:
         st.write("No standings data available.")
         return
-    
+
     driver_standings = standings.content[0]
-    
+
     # Calculate the maximum points for the remaining season
     def calculate_max_points_for_remaining_season():
         POINTS_FOR_SPRINT = 8 + 25 + 1  # Winning the sprint, race, and fastest lap
         POINTS_FOR_CONVENTIONAL = 25 + 1  # Winning the race and fastest lap
 
-        events = fastf1.events.get_event_schedule(year, backend='ergast')
-        events = events[events['RoundNumber'] > round_number]
-        
+        events = fastf1.events.get_event_schedule(year, backend="ergast")
+        events = events[events["RoundNumber"] > round_number]
+
         # Count how many sprints and conventional races are left
         sprint_events = len(events.loc[events["EventFormat"] == "sprint_shootout"])
         conventional_events = len(events.loc[events["EventFormat"] == "conventional"])
@@ -415,22 +714,24 @@ def who_can_win_wdc(year, round_number):
         conventional_points = conventional_events * POINTS_FOR_CONVENTIONAL
 
         return sprint_points + conventional_points
-    
+
     max_points = calculate_max_points_for_remaining_season()
-    
+
     # Get the leader's points
-    leader_points = int(driver_standings.loc[0]['points'])
-    
-    st.write(f"Current Leader: {driver_standings.loc[0]['givenName']} {driver_standings.loc[0]['familyName']}")
+    leader_points = int(driver_standings.loc[0]["points"])
+
+    st.write(
+        f"Current Leader: {driver_standings.loc[0]['givenName']} {driver_standings.loc[0]['familyName']}"
+    )
     st.write(f"Leader's Points: {leader_points}")
     st.write(f"Maximum Points Available in Remaining Races: {max_points}")
-    
+
     # Determine which drivers can still win
     for i, _ in enumerate(driver_standings.iterrows()):
         driver = driver_standings.loc[i]
         driver_max_points = int(driver["points"]) + max_points
         can_win = driver_max_points > leader_points
-        
+
         st.write(
             f"{driver['position']}: {driver['givenName']} {driver['familyName']}, "
             f"Current Points: {driver['points']}, "
@@ -515,59 +816,224 @@ def draw_track_map(session):
     st.pyplot(fig)
 
 
+def fetch_round_number(year, race_name):
+    schedule = fetch_races(year)
+    race_info = schedule[schedule["EventName"] == race_name]
+
+    if not race_info.empty:
+        return int(race_info["RoundNumber"].values[0])  # Extract round number
+    return None
+
+
+def fetch_race_results(session):
+    try:
+        # Get race results (classified finishers)
+        race_results = session.results
+        if race_results.empty:
+            return None, None
+
+        # Extract top 3 finishers
+        top_3 = race_results[["Position", "FullName", "TeamName"]].head(3)
+
+        return race_results, top_3
+    except Exception as e:
+        st.error(f"Error fetching race results: {e}")
+        return None, None
+
+
+def format_time(delta):
+    """Convert timedelta to MM:SS.sss format."""
+    if pd.isna(delta):  # Handle missing times
+        return "N/A"
+
+    total_seconds = delta.total_seconds()
+    minutes = int(total_seconds // 60)
+    seconds = int(total_seconds % 60)
+    milliseconds = int((total_seconds - (minutes * 60) - seconds) * 1000)
+
+    return f"{minutes:02}:{seconds:02}.{milliseconds:03}"
+
+
+def fetch_qualifying_results(year, race_name):
+    try:
+        # Load the qualifying session
+        qualifying_session = ff1.get_session(year, race_name, "Q")
+        qualifying_session.load()
+
+        # Extract qualifying results
+        qualifying_results = qualifying_session.results[
+            ["Position", "FullName", "Q1", "Q2", "Q3"]
+        ]
+
+        # Convert Position to integer
+        qualifying_results["Position"] = qualifying_results["Position"].astype(int)
+
+        # Format Q1, Q2, Q3 times
+        for col in ["Q1", "Q2", "Q3"]:
+            qualifying_results[col] = qualifying_results[col].apply(format_time)
+
+        return qualifying_results
+    except Exception as e:
+        st.error(f"Error fetching qualifying results: {e}")
+        return None
+
+
 # Main function
 def main():
-    
+
     # Inject custom CSS
     inject_custom_css()
     st.title("Formula One Dashboard 🏎️")
-    
-    
 
-    # Sidebar for year selection
+    st.markdown(
+        """
+        Welcome to the **Formula One Dashboard**, an interactive tool for analyzing F1 race data. 
+        Explore telemetry insights, lap times, tire usage, pit stops, fuel consumption, 
+        and more. Use the filters in the sidebar to select a **year, race, and driver** 
+        and get real-time insights on their performance.
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Sidebar for filters
     st.sidebar.title("Filters")
-    year = st.sidebar.selectbox("Select Year", range(2025, 2020, -1))
+    year = st.sidebar.selectbox("Select Year", range(2025, 2017, -1))
+
     # Fetch all races for the selected year
     schedule = fetch_races(year)
     st.sidebar.write(f"Races in {year}:")
     race_names = schedule.EventName.tolist()
     selected_race = st.sidebar.selectbox("Select Race", race_names)
 
-
-    # Fetch session data for the selected race
+    # Dynamically get the round number based on selected race
+    round_number = fetch_round_number(year, selected_race)
     session, has_data = fetch_session_data(year, selected_race)
-    
-    if not has_data:
-        st.warning("No data available for the selected race. Please choose another race.")
+
+    # Fetch session data and race results using the retrieved round number
+    if round_number:
+        session, has_data = fetch_session_data(year, selected_race)
+        race_results, top_3 = fetch_race_results(session)
+        qualifying_results = fetch_qualifying_results(year, selected_race)
+
+        if not has_data:
+            st.warning(
+                "No data available for the selected race. Please choose another race."
+            )
+        else:
+            # Display race details
+            st.header(f"🏁 {selected_race} - {year}")
+
+            col1, col2 = st.columns(2)  # Two columns for race details
+
+            with col1:
+                st.subheader("Race Information")
+                st.write(f"📅 **Race Date:** {session.event['EventDate']}")
+                st.write(f"📍 **Track:** {session.event['Location']}")
+
+                if race_results is not None:
+                    st.subheader("🏆 Podium Finishers")
+                    if top_3 is not None:
+                        for _, row in top_3.iterrows():
+                            driver_name = row["FullName"]
+                            driver_team = row["TeamName"]
+                            driver_image = DRIVER_IMAGES.get(
+                                driver_name,
+                                "https://upload.wikimedia.org/wikipedia/commons/3/3f/F1_logo.svg",
+                            )  # Default F1 logo if image not found
+
+                            if row["Position"] == 1:
+                                st.markdown(
+                                    f"<h1 style='font-size:32px;'>🥇 <b>{driver_name} ({driver_team})</b></h1>",
+                                    unsafe_allow_html=True,
+                                )
+                            elif row["Position"] == 2:
+                                st.markdown(
+                                    f"<h2 style='font-size:28px;'>🥈 <b>{driver_name} ({driver_team})</b></h2>",
+                                    unsafe_allow_html=True,
+                                )
+                            elif row["Position"] == 3:
+                                st.markdown(
+                                    f"<h3 style='font-size:26px;'>🥉 <b>{driver_name} ({driver_team})</b></h3>",
+                                    unsafe_allow_html=True,
+                                )
+
+                # Display qualifying results
+                if qualifying_results is not None:
+                    st.subheader("🏁 Qualifying Results")
+                    st.dataframe(
+                        qualifying_results.style.set_properties(
+                            **{"text-align": "center"}
+                        )
+                    )
+                else:
+                    st.write("No qualifying data available.")
+
+            with col2:
+                # Get the circuit name from the selected Grand Prix
+                circuit_name = grand_prix_to_circuit.get(selected_race)
+
+                # Retrieve track details using the circuit name
+                track_details = track_info.get(circuit_name)
+
+                if track_details:
+                    st.subheader("🏁 Track Information")
+                    st.write(
+                        f"📍 **Location:** {track_details['location']}, {track_details['country']}"
+                    )
+                    st.write(f"📏 **Length:** {track_details['length_km']} km")
+                    st.write(f"🔄 **Number of Corners:** {track_details['corners']}")
+                    st.write(f"📜 **History:** {track_details['history']}")
+                else:
+                    st.warning("Track information not available for this Grand Prix.")
+
+                draw_track_map(session)  # Display the track map in the second column
+
+            st.markdown("---")  # Separator
+
     else:
+        st.warning("Unable to determine the round number for the selected race.")
 
-        # Display race details
-        st.header(f"{selected_race} - {year}")
-        st.write(f"Race Date: {session.event['EventDate']}")
-        st.write(f"Track: {session.event['Location']}")
+    st.markdown("---")  # Separator for sections
 
-        # Driver selection
-        driver_info = get_driver_names_with_numbers(session)
-        selected_driver_info = st.selectbox("Select Driver", driver_info)
-        
-        draw_track_map(session)  # Track map with numbered corners
+    # Driver selection
+    driver_info = get_driver_names_with_numbers(session)
+    selected_driver_info = st.selectbox("Select Driver", driver_info)
 
+    # Create a visually appealing grid layout for graphs
+    col1, col2, col3 = st.columns(3)
 
-        # Create a grid layout for graphs
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            create_telemetry_plots(session, selected_driver_info)
-            create_sector_time_analysis(session, selected_driver_info)
-            create_fuel_usage_analysis(session, selected_driver_info)  # Fuel usage analysis
-            create_lap_time_scatterplot(session)  # Lap time scatterplot
+    with col1:
+        st.subheader("📊 Telemetry & Performance")
+        st.markdown("---")
+        create_telemetry_plots(session, selected_driver_info)
+        st.markdown("---")
 
-        with col2:
-            create_lap_time_analysis(session)
-            create_tire_usage_analysis(session)
-            create_pit_stop_analysis(session)
-            create_position_change_analysis(session)
-            create_weather_analysis(session)  # Weather analysis
+    with col2:
+        st.subheader("⏱️ Lap & Tire Analysis")
+        st.markdown("---")
+        create_lap_time_scatterplot(session)
+        st.markdown("---")
+        create_lap_time_analysis(session)
+        st.markdown("---")
+        create_tire_usage_analysis(session)
+        st.markdown("---")
+        create_sector_time_analysis(session, selected_driver_info)
+        st.markdown("---")
+        create_fuel_usage_analysis(session, selected_driver_info)
+        st.markdown("---")
+
+    with col3:
+        st.subheader("🔧 Pit Stops & Weather")
+        st.markdown("---")
+        create_pit_stop_analysis(session)
+        st.markdown("---")
+        create_position_change_analysis(session)
+        st.markdown("---")
+        create_weather_analysis(session)
+        st.markdown("---")
+
+    st.markdown("---")  # Separator for better structure
+    create_enhanced_telemetry_plots(session, selected_driver_info)
 
 
 if __name__ == "__main__":
