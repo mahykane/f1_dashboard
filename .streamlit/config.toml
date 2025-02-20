@@ -1,0 +1,16 @@
+[theme]
+primaryColor = "#FF1801"  # Formula 1 red
+backgroundColor = "#1E1E1E"  # Dark background
+secondaryBackgroundColor = "#2E2E2E"  # Slightly lighter background
+textColor = "#FFFFFF"  # White text
+font = "sans serif"
+
+[server]
+headless = true
+runOnSave = true
+
+[runner]
+fastReruns = true
+
+[ui]
+wideMode = true  # Enable wide mode
