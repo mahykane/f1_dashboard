@@ -394,12 +394,6 @@ def create_telemetry_plots(session, selected_driver_info):
     )
     st.plotly_chart(fig_drs, use_container_width=True)
     
-    
-    
-import streamlit as st
-import plotly.express as px
-import fastf1 as ff1
-import numpy as np
 
 def create_enhanced_telemetry_plots(session, selected_driver_info):
     st.subheader("📊 Enhanced Telemetry Analysis")
