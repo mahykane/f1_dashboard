@@ -7,6 +7,10 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 from fastf1.ergast import Ergast
+import requests
+import json
+import logging
+from urllib.request import urlopen
 
 # Enable FastF1 caching
 if not os.path.exists("cache"):
@@ -870,6 +874,57 @@ def fetch_qualifying_results(year, race_name):
     except Exception as e:
         st.error(f"Error fetching qualifying results: {e}")
         return None
+    
+    
+def fetch_team_radio():
+    """Fetches the latest Team Radio messages from the Formula 1 API."""
+    try:
+        # Get session information to construct the correct URL
+        with urlopen('http://livetiming.formula1.com/static/SessionInfo.json') as response:
+            if response.getcode() == 200:
+                logging.info('Fetching session info...')
+                session_data = json.loads(response.read())
+
+                # Construct the URL for Team Radio data
+                team_radio_url = f"http://livetiming.formula1.com/static/{session_data['Path']}TeamRadio.json"
+                logging.info('Fetching Team Radio data...')
+
+                # Request Team Radio JSON
+                r = requests.get(team_radio_url)
+                r.encoding = 'utf-8-sig'
+
+                # Load JSON data
+                radio_data = json.loads(r.text)
+                return radio_data
+
+    except Exception as e:
+        logging.error(f"Error fetching Team Radio: {e}")
+        return None
+
+def display_team_radio():
+    """Displays Team Radio messages in the Streamlit Dashboard."""
+    st.subheader("🎙️ Team Radio Messages")
+    
+    team_radio_data = fetch_team_radio()
+
+    if team_radio_data and "Messages" in team_radio_data:
+        messages = team_radio_data["Messages"]
+
+        if not messages:
+            st.info("No team radio messages available at the moment.")
+            return
+
+        for message in messages:
+            driver = message.get("Driver", "Unknown Driver")
+            content = message.get("Message", "No message available")
+            time = message.get("Time", "Unknown Time")
+
+            # Format display with driver name, message, and timestamp
+            with st.expander(f"🎤 {driver} - {time}"):
+                st.write(f"🗣 **Message:** {content}")
+
+    else:
+        st.error("Could not retrieve Team Radio messages. Try again later.")
 
 
 # Main function
@@ -989,9 +1044,12 @@ def main():
 
     st.markdown("---")  # Separator for sections
 
-    # Driver selection
-    driver_info = get_driver_names_with_numbers(session)
-    selected_driver_info = st.selectbox("Select Driver", driver_info)
+    if not session:
+        st.stop()
+    else:
+        # Driver selection
+        driver_info = get_driver_names_with_numbers(session)
+        selected_driver_info = st.selectbox("Select Driver", driver_info)
 
     # Create a visually appealing grid layout for graphs
     col1, col2, col3 = st.columns(3)
@@ -1028,7 +1086,7 @@ def main():
 
     st.markdown("---")  # Separator for better structure
     create_enhanced_telemetry_plots(session, selected_driver_info)
-
+    display_team_radio()
 
 if __name__ == "__main__":
     main()
