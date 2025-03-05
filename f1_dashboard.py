@@ -11,6 +11,9 @@ import requests
 import json
 import logging
 from urllib.request import urlopen
+import plotly.express as px
+import requests
+import json
 
 # Enable FastF1 caching
 if not os.path.exists("cache"):
@@ -19,6 +22,21 @@ ff1.Cache.enable_cache("cache")
 
 # Set page title and layout
 st.set_page_config(page_title="Formula One Dashboard", page_icon="🏎️", layout="wide")
+
+# Sidebar Section Toggle (Session State)
+if "sections" not in st.session_state:
+    st.session_state["sections"] = {
+        "Telemetry": False,
+        "Lap & Tire Analysis": False,
+        "Pit Stops & Weather": False,
+        "Driver Comparison": False,
+    }
+
+
+# Function to toggle sections
+def toggle_section(section):
+    st.session_state["sections"][section] = not st.session_state["sections"][section]
+
 
 # Set up FastF1 plotting
 plotting.setup_mpl()
@@ -276,8 +294,6 @@ def inject_custom_css():
                 background-color: #E51600;
             }
 
-        
-
             /* Tables */
             .stDataFrame {
                 border-radius: 15px;
@@ -288,8 +304,6 @@ def inject_custom_css():
 
             /* Custom font */
             @import url('https://fonts.googleapis.com/css2?family=Formula1&display=swap');
-
-            
 
             /* Markdown text */
             .stMarkdown {
@@ -309,6 +323,61 @@ def inject_custom_css():
             .stSlider {
                 color: #FF1801;
             }
+
+            /* Headers */
+            h2, h3, h4, h5, h6 {
+                color: #FF1801;
+                font-family: 'Formula1', sans-serif;
+            }
+
+            /* Subheaders */
+            .stSubheader {
+                color: #FF1801;
+                font-family: 'Formula1', sans-serif;
+            }
+
+            /* Expander */
+            .stExpander {
+                background-color: #1E1E1E;
+                color: #FFFFFF;
+                border-radius: 10px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            }
+
+            /* Plotly charts */
+            .plotly {
+                background-color: #2E2E2E;
+                border-radius: 10px;
+                padding: 1rem;
+            }
+            /* Custom Font */
+            @import url('https://fonts.googleapis.com/css2?family=Formula1&display=swap');
+
+            /* Set Background */
+            .stApp {
+                background-color: #121212;
+                color: #FFFFFF;
+                font-family: 'Formula1', sans-serif;
+            }
+
+            /* Sidebar */
+            .css-1d391kg {
+                background-color: #1E1E1E;
+                border-radius: 10px;
+                padding: 1rem;
+            }
+
+            /* Buttons */
+            .stButton button {
+                background-color: #FF1801;
+                color: #FFFFFF;
+                border-radius: 10px;
+                font-weight: bold;
+            }
+
+            .stButton button:hover {
+                background-color: #E51600;
+            }
         </style>
         """,
         unsafe_allow_html=True,
@@ -321,17 +390,86 @@ def fetch_races(year):
     return schedule
 
 
+
+
+
 # Function to fetch session data for a specific race
 def fetch_session_data(year, race_name):
     try:
-        session = ff1.get_session(year, race_name, "R")  # Race session
-        session.load()
-        has_data = not session.laps.empty  # Check if session has lap data
+        # st.write(f"Fetching session data for {year} for the race {race_name} ...")
+        # Check if it's the 2025 season pretesting
+        if year == 2025 and race_name.lower() == "pre-season testing":
+            # st.write("Fetching pre-season testing session data ...")
+            session = ff1.get_testing_session(2025, 1, 1)  # Fetch pretesting session
+        else:
+            session = ff1.get_session(year, race_name, "R")  # Regular race session
 
-        return session, has_data
+        session.load()
+        # has_data = not session.laps.empty  # Check if session has lap data
+        # st.write("Session data fetched successfully.")
+
+        return session
     except Exception as e:
-        st.error(f"Error fetching session data: {e}")
+        st.warning(f"Error fetching session data: {e}")
         return None, False
+
+
+OLLAMA_API_URL = "http://localhost:11434/"  # Update if your Ollama instance runs on a different port
+
+# Function to check if Ollama API is accessible
+def is_ollama_api_available():
+    try:
+        response = requests.get(OLLAMA_API_URL, timeout=3)  # Quick health check
+        return response.status_code == 200
+    except requests.exceptions.RequestException:
+        return False
+
+# Store API availability in session state to avoid multiple checks
+if "ollama_available" not in st.session_state:
+    st.session_state["ollama_available"] = is_ollama_api_available()
+
+
+def interpret_data_with_ollama(data):
+    """
+    Sends telemetry data to Ollama API for AI-based interpretation.
+
+    Args:
+        data (dict): A dictionary containing telemetry, lap, or strategy data.
+
+    Returns:
+        str: AI-generated insights from Ollama.
+    """
+    # Prepare request payload
+    payload = {
+        "model": "llama3",
+        "prompt": f"""
+            You are a Formula 1 data analyst specializing in telemetry and race performance insights.
+            
+            Analyze the following telemetry data from an F1 race and provide a structured breakdown:
+            
+            - **Overall Driver Performance:** Identify key highlights from the data, including top speed, fastest lap, and throttle consistency.
+            - **Sector Performance:** Compare Sector 1, Sector 2, and Sector 3 times. Which sector is the driver strongest or weakest in?
+            - **Pit Stop Efficiency:** Assess the number and duration of pit stops. How does this compare to an optimal race strategy?
+            - **Telemetry Analysis:** Examine speed, throttle, braking, RPM, DRS usage, and gear shifts. Are there any unusual patterns or trends?
+            - **Comparative Insights:** If historical data is available, compare this session with previous performances for the same driver or track.
+            - **Recommendations:** Suggest potential improvements based on the data. Should the driver optimize braking zones, throttle application, or pit strategy?
+            
+            Here is the telemetry data for analysis:
+            {json.dumps(data, indent=2)}
+            
+            Provide your insights in a structured and concise manner, using bullet points for clarity.
+            """,
+        "stream": False,  # Set to True for streaming responses
+    }
+
+    try:
+        response = requests.post(OLLAMA_API_URL, json=payload)
+        if response.status_code == 200:
+            return response.json().get("response", "No insights available.")
+        else:
+            return f"Error: {response.status_code} - {response.text}"
+    except Exception as e:
+        return f"Error communicating with Ollama API: {e}"
 
 
 # Function to get driver names with their numbers
@@ -341,6 +479,7 @@ def get_driver_names_with_numbers(session):
     for driver in drivers:
         driver_name = session.get_driver(driver)["FullName"]
         driver_info.append(f"{driver_name} ({driver})")
+
     return driver_info
 
 
@@ -397,7 +536,7 @@ def create_telemetry_plots(session, selected_driver_info):
         tel, x="Distance", y="DRS", title=f"DRS Usage - {selected_driver_info}"
     )
     st.plotly_chart(fig_drs, use_container_width=True)
-    
+
 
 def create_enhanced_telemetry_plots(session, selected_driver_info):
     st.subheader("📊 Enhanced Telemetry Analysis")
@@ -425,9 +564,9 @@ def create_enhanced_telemetry_plots(session, selected_driver_info):
     tel = lap.get_telemetry()
 
     # Calculate Steering Angle
-    tel['delta_x'] = tel['X'].diff()
-    tel['delta_y'] = tel['Y'].diff()
-    tel['SteeringAngle'] = np.arctan2(tel['delta_y'], tel['delta_x']) * (180 / np.pi)
+    tel["delta_x"] = tel["X"].diff()
+    tel["delta_y"] = tel["Y"].diff()
+    tel["SteeringAngle"] = np.arctan2(tel["delta_y"], tel["delta_x"]) * (180 / np.pi)
 
     # Define telemetry parameters and their labels
     telemetry_params = {
@@ -437,7 +576,7 @@ def create_enhanced_telemetry_plots(session, selected_driver_info):
         "nGear": "Gear",
         "DRS": "DRS Activation",
         "RPM": "Engine RPM",
-        "SteeringAngle": "Steering Angle (°)"
+        "SteeringAngle": "Steering Angle (°)",
     }
 
     # Create two columns for the graphs
@@ -450,7 +589,7 @@ def create_enhanced_telemetry_plots(session, selected_driver_info):
                 x="Distance",
                 y=param,
                 title=f"{label} vs Distance - {selected_driver_info}",
-                labels={"Distance": "Distance (m)", param: label}
+                labels={"Distance": "Distance (m)", param: label},
             )
             st.plotly_chart(fig, use_container_width=True)
 
@@ -461,7 +600,7 @@ def create_enhanced_telemetry_plots(session, selected_driver_info):
                 x="Distance",
                 y=param,
                 title=f"{label} vs Distance - {selected_driver_info}",
-                labels={"Distance": "Distance (m)", param: label}
+                labels={"Distance": "Distance (m)", param: label},
             )
             st.plotly_chart(fig, use_container_width=True)
 
@@ -700,7 +839,7 @@ def who_can_win_wdc(year, round_number):
         POINTS_FOR_SPRINT = 8 + 25 + 1  # Winning the sprint, race, and fastest lap
         POINTS_FOR_CONVENTIONAL = 25 + 1  # Winning the race and fastest lap
 
-        events = fastf1.events.get_event_schedule(year, backend="ergast")
+        events = ff1.events.get_event_schedule(year, backend="ergast")
         events = events[events["RoundNumber"] > round_number]
 
         # Count how many sprints and conventional races are left
@@ -874,24 +1013,26 @@ def fetch_qualifying_results(year, race_name):
     except Exception as e:
         st.error(f"Error fetching qualifying results: {e}")
         return None
-    
-    
+
+
 def fetch_team_radio():
     """Fetches the latest Team Radio messages from the Formula 1 API."""
     try:
         # Get session information to construct the correct URL
-        with urlopen('http://livetiming.formula1.com/static/SessionInfo.json') as response:
+        with urlopen(
+            "http://livetiming.formula1.com/static/SessionInfo.json"
+        ) as response:
             if response.getcode() == 200:
-                logging.info('Fetching session info...')
+                logging.info("Fetching session info...")
                 session_data = json.loads(response.read())
 
                 # Construct the URL for Team Radio data
                 team_radio_url = f"http://livetiming.formula1.com/static/{session_data['Path']}TeamRadio.json"
-                logging.info('Fetching Team Radio data...')
+                logging.info("Fetching Team Radio data...")
 
                 # Request Team Radio JSON
                 r = requests.get(team_radio_url)
-                r.encoding = 'utf-8-sig'
+                r.encoding = "utf-8-sig"
 
                 # Load JSON data
                 radio_data = json.loads(r.text)
@@ -901,10 +1042,11 @@ def fetch_team_radio():
         logging.error(f"Error fetching Team Radio: {e}")
         return None
 
+
 def display_team_radio():
     """Displays Team Radio messages in the Streamlit Dashboard."""
     st.subheader("🎙️ Team Radio Messages")
-    
+
     team_radio_data = fetch_team_radio()
 
     if team_radio_data and "Messages" in team_radio_data:
@@ -927,9 +1069,351 @@ def display_team_radio():
         st.error("Could not retrieve Team Radio messages. Try again later.")
 
 
-# Main function
-def main():
+# Create telemetry comparison plots
+def create_telemetry_comparison(session, selected_drivers):
+    st.subheader("📊 Multi-Driver Telemetry Comparison")
 
+    telemetry_params = {
+        "Speed": "Speed (km/h)",
+        "Throttle": "Throttle (%)",
+        "Brake": "Brake Pressure",
+        "nGear": "Gear",
+        "DRS": "DRS Activation",
+        "RPM": "Engine RPM",
+    }
+
+    fig = plt.figure(figsize=(12, 6))
+    ax = fig.add_subplot(111)
+
+    for driver_info in selected_drivers:
+        driver = driver_info.split("(")[-1].strip(")")
+        lap = session.laps.pick_driver(driver).pick_fastest()
+        tel = lap.get_telemetry()
+
+        ax.plot(tel["Distance"], tel["Speed"], label=f"{driver_info}")
+
+    ax.set_xlabel("Distance (m)")
+    ax.set_ylabel("Speed (km/h)")
+    ax.set_title("Speed Comparison Across Drivers")
+    ax.legend()
+    st.pyplot(fig)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        for param, label in list(telemetry_params.items())[:3]:  # First three
+            fig_param = px.line(
+                title=f"{label} vs Distance",
+                labels={"Distance": "Distance (m)", param: label},
+            )
+            for driver_info in selected_drivers:
+                driver = driver_info.split("(")[-1].strip(")")
+                lap = session.laps.pick_driver(driver).pick_fastest()
+                tel = lap.get_telemetry()
+                fig_param.add_scatter(
+                    x=tel["Distance"], y=tel[param], mode="lines", name=driver_info
+                )
+            st.plotly_chart(fig_param, use_container_width=True)
+
+    with col2:
+        for param, label in list(telemetry_params.items())[3:]:  # Last three
+            fig_param = px.line(
+                title=f"{label} vs Distance",
+                labels={"Distance": "Distance (m)", param: label},
+            )
+            for driver_info in selected_drivers:
+                driver = driver_info.split("(")[-1].strip(")")
+                lap = session.laps.pick_driver(driver).pick_fastest()
+                tel = lap.get_telemetry()
+                fig_param.add_scatter(
+                    x=tel["Distance"], y=tel[param], mode="lines", name=driver_info
+                )
+            st.plotly_chart(fig_param, use_container_width=True)
+
+
+# Create lap time comparison
+def create_lap_time_comparison(session, selected_drivers):
+    st.subheader("⏱️ Lap Time Comparison")
+
+    laps = session.laps
+    fig = px.line(title="Lap Time Comparison Across Drivers")
+
+    for driver_info in selected_drivers:
+        driver = driver_info.split("(")[-1].strip(")")
+        driver_laps = laps.pick_driver(driver)
+        fig.add_scatter(
+            x=driver_laps["LapNumber"],
+            y=driver_laps["LapTime"],
+            mode="lines",
+            name=driver_info,
+        )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
+# Create sector time comparison
+def create_sector_time_comparison(session, selected_drivers):
+    st.subheader("🏎️ Sector Time Comparison")
+
+    fig = px.line(title="Sector Time Comparison")
+
+    for driver_info in selected_drivers:
+        driver = driver_info.split("(")[-1].strip(")")
+        laps = session.laps.pick_driver(driver)
+
+        sector_times = laps[["LapNumber", "Sector1Time", "Sector2Time", "Sector3Time"]]
+        sector_times_melted = sector_times.melt(
+            id_vars=["LapNumber"],
+            value_vars=["Sector1Time", "Sector2Time", "Sector3Time"],
+            var_name="Sector",
+            value_name="Time",
+        )
+
+        for sector in ["Sector1Time", "Sector2Time", "Sector3Time"]:
+            sector_data = sector_times_melted[sector_times_melted["Sector"] == sector]
+            fig.add_scatter(
+                x=sector_data["LapNumber"],
+                y=sector_data["Time"],
+                mode="lines",
+                name=f"{driver_info} - {sector}",
+            )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
+# Create pit stop comparison
+def create_pit_stop_comparison(session, selected_drivers):
+    st.subheader("🛑 Pit Stop Comparison")
+
+    pit_stops = session.laps[session.laps["PitInTime"].notna()]
+    pit_stop_data = []
+
+    for driver_info in selected_drivers:
+        driver = driver_info.split("(")[-1].strip(")")
+        driver_pit_stops = pit_stops[pit_stops["Driver"] == driver]
+
+        for _, row in driver_pit_stops.iterrows():
+            pit_duration = (row["PitOutTime"] - row["PitInTime"]).total_seconds()
+            pit_stop_data.append(
+                {
+                    "Driver": driver_info,
+                    "Lap": row["LapNumber"],
+                    "PitDuration": pit_duration,
+                }
+            )
+
+    pit_df = pd.DataFrame(pit_stop_data)
+    if not pit_df.empty:
+        fig = px.bar(
+            pit_df, x="Driver", y="PitDuration", color="Lap", title="Pit Stop Durations"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.write("No pit stop data available for these drivers.")
+
+
+def render_track_map(session, selected_driver_info):
+    """
+    Render an interactive track map visualization.
+    - Displays the driver's racing line based on telemetry GPS data.
+    - Color-coded by speed to show acceleration and braking zones.
+
+    Args:
+        session: FastF1 session object.
+        selected_driver_info: Driver name with number (e.g., "Max Verstappen (33)").
+    """
+    st.subheader("🗺️ Track Map: Driver Path & Speed")
+
+    # Extract the driver number from the selection
+    selected_driver = selected_driver_info.split("(")[-1].strip(")")
+
+    # Get the fastest lap for the selected driver
+    fastest_lap = session.laps.pick_driver(selected_driver).pick_fastest()
+    if fastest_lap is None:
+        st.warning("No fastest lap data available for this driver.")
+        return
+
+    # Get telemetry data (GPS X, Y coordinates & Speed)
+    telemetry = fastest_lap.get_telemetry()
+
+    # Create a scatter plot with GPS data
+    fig = px.scatter(
+        telemetry,
+        x="X",
+        y="Y",
+        color="Speed",
+        title=f"{selected_driver_info} - Fastest Lap GPS Data",
+        labels={
+            "Speed": "Speed (km/h)",
+            "X": "Track Position (X)",
+            "Y": "Track Position (Y)",
+        },
+        color_continuous_scale=px.colors.sequential.Plasma,
+        template="plotly_dark",
+    )
+
+    # Display the plot
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def create_ai_analysis_data(session, selected_driver_info, selected_graphs):
+    """
+    Creates a structured data object for AI analysis based on user-selected graphs.
+
+    Args:
+        session: FastF1 session object containing race data.
+        selected_driver_info (str): The selected driver with number in format "Driver Name (Number)".
+        selected_graphs (list): List of selected graphs for analysis.
+
+    Returns:
+        dict: A dictionary containing key telemetry and performance metrics for AI interpretation.
+    """
+
+    try:
+        selected_driver = selected_driver_info.split("(")[-1].strip(")")
+        fastest_lap = session.laps.pick_driver(selected_driver).pick_fastest()
+        telemetry = fastest_lap.get_telemetry()
+        pit_stops = session.laps[session.laps["PitInTime"].notna()]
+
+        average_pit_duration = (
+            (pit_stops["PitOutTime"] - pit_stops["PitInTime"]).dt.total_seconds().mean()
+            if not pit_stops.empty
+            else None
+        )
+
+        def convert_to_serializable(value):
+            if isinstance(value, (np.int64, np.float64)):
+                return value.item()
+            return value
+
+        data_for_analysis = {"Driver": selected_driver_info}
+
+        # Include only user-selected graphs
+        if "Fastest Lap Time" in selected_graphs:
+            data_for_analysis["Fastest Lap Time (s)"] = convert_to_serializable(
+                fastest_lap.LapTime.total_seconds()
+            )
+
+        if "Top Speed" in selected_graphs:
+            data_for_analysis["Top Speed (km/h)"] = convert_to_serializable(
+                telemetry["Speed"].max()
+            )
+
+        if "Throttle Analysis" in selected_graphs:
+            data_for_analysis["Average Throttle (%)"] = convert_to_serializable(
+                telemetry["Throttle"].mean()
+            )
+
+        if "Sector Times" in selected_graphs:
+            data_for_analysis["Sector Times (s)"] = {
+                "Sector 1": (
+                    convert_to_serializable(fastest_lap.Sector1Time.total_seconds())
+                    if pd.notna(fastest_lap.Sector1Time)
+                    else None
+                ),
+                "Sector 2": (
+                    convert_to_serializable(fastest_lap.Sector2Time.total_seconds())
+                    if pd.notna(fastest_lap.Sector2Time)
+                    else None
+                ),
+                "Sector 3": (
+                    convert_to_serializable(fastest_lap.Sector3Time.total_seconds())
+                    if pd.notna(fastest_lap.Sector3Time)
+                    else None
+                ),
+            }
+
+        if "Pit Stop Analysis" in selected_graphs:
+            data_for_analysis["Pit Stop Analysis"] = {
+                "Total Pit Stops": convert_to_serializable(len(pit_stops)),
+                "Average Pit Duration (s)": convert_to_serializable(
+                    average_pit_duration
+                ),
+            }
+
+        if "Telemetry Summary" in selected_graphs:
+            data_for_analysis["Telemetry Summary"] = {
+                "Max RPM": (
+                    convert_to_serializable(telemetry["RPM"].max())
+                    if "RPM" in telemetry.columns
+                    else None
+                ),
+                "Gear Shifts Count": (
+                    convert_to_serializable(telemetry["nGear"].nunique())
+                    if "nGear" in telemetry.columns
+                    else None
+                ),
+                "DRS Activations": (
+                    convert_to_serializable(telemetry["DRS"].sum())
+                    if "DRS" in telemetry.columns
+                    else None
+                ),
+                "Brake Usage (%)": (
+                    convert_to_serializable(telemetry["Brake"].mean())
+                    if "Brake" in telemetry.columns
+                    else None
+                ),
+                "Distance Covered (m)": (
+                    convert_to_serializable(telemetry["Distance"].max())
+                    if "Distance" in telemetry.columns
+                    else None
+                ),
+            }
+
+        return data_for_analysis
+
+    except Exception as e:
+        return {"error": f"Failed to process AI analysis data: {e}"}
+
+def generate_strategy_recommendations(data):
+    """Send telemetry data to AI for strategy optimization insights."""
+
+    payload = {
+        "model": "llama3",
+        "prompt": f"""
+        You are an expert Formula 1 race strategist. Analyze the telemetry data and provide an **optimal race strategy**.
+        
+        **Key Areas for Analysis:**
+        1. **Lap Time Optimization:** Identify sections where the driver is losing time. Suggest improvements in braking, acceleration, and cornering.
+        2. **Fuel & Tire Strategy:** Based on speed, braking, and sector times, determine the best **tire compound** and optimal **pit stop strategy**.
+        3. **DRS & Overtaking Opportunities:** Identify where DRS was most effective and suggest overtaking points.
+        4. **Pit Stop Recommendations:** Is an **undercut** or **overcut** strategy better based on sector performance and pit lane loss time?
+        5. **Defensive & Aggressive Driving Adjustments:** Should the driver **conserve tires and fuel** or push harder based on the race situation?
+        6. **Comparisons with Rivals (if available):** How does this driver’s telemetry compare to competitors?
+
+        **Telemetry Data:**
+        {json.dumps(data, indent=2)}
+        
+        Provide clear and structured strategy recommendations, focusing on **data-driven insights** for an optimal race plan.
+        """,
+        "stream": False  # Set to True for streaming responses
+    }
+
+    # Replace with your Ollama API endpoint
+    response = requests.post("http://localhost:11434/api/generate", json=payload)
+
+    if response.status_code == 200:
+        return response.json().get("response", "No strategy recommendations available.")
+    else:
+        return f"Error: {response.status_code} - {response.text}"
+    
+ #Function to send race strategy question to Ollama API
+def ask_race_strategy_question(question, data):
+    payload = {
+        "model": "llama3",
+        "prompt": f"Analyze the following Formula 1 telemetry data and provide race strategy insights:\n\n{json.dumps(data, indent=2)}\n\nUser Question: {question}\n\nProvide a professional response with specific strategic insights.",
+        "stream": False  # Set to True for streaming responses
+    }
+    
+    # Send request to Ollama API
+    response = requests.post("http://localhost:11434/api/generate", json=payload)
+
+    if response.status_code == 200:
+        return response.json().get("response", "No response received.")
+    else:
+        return f"Error: {response.status_code} - Unable to fetch AI insights."
+
+## Main function
+def main():
     # Inject custom CSS
     inject_custom_css()
     st.title("Formula One Dashboard 🏎️")
@@ -946,21 +1430,56 @@ def main():
 
     # Sidebar for filters
     st.sidebar.title("Filters")
-    year = st.sidebar.selectbox("Select Year", range(2025, 2017, -1))
+
+    # Ensure session state is initialized
+    if "year" not in st.session_state:
+        st.session_state["year"] = 2025  # Default value
+    if "race_name" not in st.session_state:
+        st.session_state["race_name"] = ""
+
+    # Select Year
+    st.session_state["year"] = st.sidebar.selectbox(
+        "Select Year", range(2025, 2017, -1), index=0
+    )
+    year = st.session_state["year"]
 
     # Fetch all races for the selected year
     schedule = fetch_races(year)
-    st.sidebar.write(f"Races in {year}:")
     race_names = schedule.EventName.tolist()
-    selected_race = st.sidebar.selectbox("Select Race", race_names)
+
+    # Retain selected race in session state
+    if st.session_state["race_name"] not in race_names:
+        st.session_state["race_name"] = race_names[
+            0
+        ]  # Default to first race if invalid
+
+    # Select Race
+    st.session_state["race_name"] = st.sidebar.selectbox(
+        "Select Race", race_names, index=race_names.index(st.session_state["race_name"])
+    )
+    selected_race = st.session_state["race_name"]
+
+    # Sidebar Navigation
+    # st.sidebar.title("Navigation")
+    # st.sidebar.button("📊 Telemetry", on_click=toggle_section, args=("Telemetry",))
+    # st.sidebar.button(
+    #     "⏱️ Lap & Tire Analysis", on_click=toggle_section, args=("Lap & Tire Analysis",)
+    # )
+    # st.sidebar.button(
+    #     "🔧 Pit Stops & Weather", on_click=toggle_section, args=("Pit Stops & Weather",)
+    # )
+    # st.sidebar.button(
+    #     "🏎️ Compare Drivers", on_click=toggle_section, args=("Driver Comparison",)
+    # )
 
     # Dynamically get the round number based on selected race
     round_number = fetch_round_number(year, selected_race)
-    session, has_data = fetch_session_data(year, selected_race)
+    session = fetch_session_data(year, selected_race)
+    has_data = True  # Check if session has lap data
 
     # Fetch session data and race results using the retrieved round number
     if round_number:
-        session, has_data = fetch_session_data(year, selected_race)
+        session = fetch_session_data(year, selected_race)
         race_results, top_3 = fetch_race_results(session)
         qualifying_results = fetch_qualifying_results(year, selected_race)
 
@@ -969,7 +1488,6 @@ def main():
                 "No data available for the selected race. Please choose another race."
             )
         else:
-            # Display race details
             st.header(f"🏁 {selected_race} - {year}")
 
             col1, col2 = st.columns(2)  # Two columns for race details
@@ -985,10 +1503,6 @@ def main():
                         for _, row in top_3.iterrows():
                             driver_name = row["FullName"]
                             driver_team = row["TeamName"]
-                            driver_image = DRIVER_IMAGES.get(
-                                driver_name,
-                                "https://upload.wikimedia.org/wikipedia/commons/3/3f/F1_logo.svg",
-                            )  # Default F1 logo if image not found
 
                             if row["Position"] == 1:
                                 st.markdown(
@@ -1050,43 +1564,140 @@ def main():
         # Driver selection
         driver_info = get_driver_names_with_numbers(session)
         selected_driver_info = st.selectbox("Select Driver", driver_info)
+        
+    
+# Hide AI features if Ollama API is unreachable
+    if st.session_state["ollama_available"]:
 
-    # Create a visually appealing grid layout for graphs
-    col1, col2, col3 = st.columns(3)
+        # Sidebar: User selects graphs for AI analysis
+        st.sidebar.subheader("📊 AI Insights Selection")
 
-    with col1:
-        st.subheader("📊 Telemetry & Performance")
-        st.markdown("---")
+        graph_options = {
+            "Fastest Lap Time": "Fastest Lap Time",
+            "Top Speed": "Top Speed",
+            "Throttle Analysis": "Throttle Analysis",
+            "Sector Times": "Sector Times",
+            "Pit Stop Analysis": "Pit Stop Analysis",
+            "Telemetry Summary": "Telemetry Summary"
+        }
+
+        # Store selected graphs dynamically
+        selected_graphs = [label for label, key in graph_options.items() if st.sidebar.checkbox(label, True)]
+        
+        # Sidebar button to open AI chat
+        if st.sidebar.button("💬 Open Race Strategy Chat"):
+            st.session_state["show_chat"] = True
+
+        # Check if chat is open
+        if st.session_state.get("show_chat", False):
+            st.header("💬 Live AI Race Strategy Chat")
+
+            # Ensure chat history is stored in session state
+            if "chat_history" not in st.session_state:
+                st.session_state["chat_history"] = []
+
+            # Display previous chat messages
+            for message in st.session_state["chat_history"]:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
+
+            # Chat input field
+            user_input = st.chat_input("Ask about race strategy...")
+
+            if user_input:
+                # Store user question
+                st.session_state["chat_history"].append({"role": "user", "content": user_input})
+
+                # Send question to AI
+                ai_response = ask_race_strategy_question(user_input, data_for_analysis)
+
+                # Store AI response
+                st.session_state["chat_history"].append({"role": "assistant", "content": ai_response})
+
+                # Display AI response
+                with st.chat_message("assistant"):
+                    st.markdown(ai_response)
+
+        # Button to generate AI Insights
+        if st.sidebar.button("Generate AI Insights"):
+            st.sidebar.info("⏳ Analyzing data...")
+
+            # Generate data for AI analysis
+            data_for_analysis = create_ai_analysis_data(
+                session, selected_driver_info, selected_graphs
+            )
+
+            # Convert to JSON string for AI processing
+            data_json = json.dumps(data_for_analysis, indent=2)
+
+            # Call Ollama API to interpret data (replace with your API function)
+            ai_insights = interpret_data_with_ollama(data_json)
+
+            # Display AI response
+            st.sidebar.success("✅ AI Analysis Complete!")
+            st.sidebar.write(ai_insights)
+            
+        if st.button("Generate AI Strategy Recommendations"):
+            data_for_analysis = create_ai_analysis_data(
+                session, selected_driver_info, selected_graphs
+            )
+            strategy_recommendations = generate_strategy_recommendations(data_for_analysis)
+            st.subheader("🏎️ AI-Powered Strategy Recommendations")
+            st.write(strategy_recommendations)
+    else:
+        st.sidebar.warning("🚨 AI services are currently unavailable.")
+        
+        
+
+    # **Accordion Sections**
+    with st.expander("📊 Telemetry & Performance", expanded=False):
+        render_track_map(session, selected_driver_info)
         create_telemetry_plots(session, selected_driver_info)
-        st.markdown("---")
 
-    with col2:
-        st.subheader("⏱️ Lap & Tire Analysis")
-        st.markdown("---")
+    with st.expander("⏱️ Lap & Tire Analysis", expanded=False):
         create_lap_time_scatterplot(session)
-        st.markdown("---")
         create_lap_time_analysis(session)
-        st.markdown("---")
         create_tire_usage_analysis(session)
-        st.markdown("---")
         create_sector_time_analysis(session, selected_driver_info)
-        st.markdown("---")
         create_fuel_usage_analysis(session, selected_driver_info)
-        st.markdown("---")
 
-    with col3:
-        st.subheader("🔧 Pit Stops & Weather")
-        st.markdown("---")
+    with st.expander("🔧 Pit Stops & Weather", expanded=False):
         create_pit_stop_analysis(session)
-        st.markdown("---")
         create_position_change_analysis(session)
-        st.markdown("---")
         create_weather_analysis(session)
-        st.markdown("---")
 
-    st.markdown("---")  # Separator for better structure
-    create_enhanced_telemetry_plots(session, selected_driver_info)
-    display_team_radio()
+    with st.expander("📈 Enhanced Telemetry Analysis", expanded=False):
+        create_enhanced_telemetry_plots(session, selected_driver_info)
+
+    # **Driver Comparison Section**
+    with st.expander("🏎️ Driver Comparison", expanded=False):
+        st.write(
+            "Compare multiple drivers across various metrics, including lap times, sector times, pit stops, and telemetry data. Select up to three drivers to analyze their performance side by side."
+        )
+
+        driver_info = get_driver_names_with_numbers(session)
+        selected_drivers = st.multiselect(
+            "Select up to 3 Drivers for Comparison",
+            driver_info,
+            default=driver_info[:2],
+        )
+
+        if len(selected_drivers) < 2:
+            st.warning("Please select at least two drivers for comparison.")
+            st.stop()
+
+        # Layout for comparison charts
+        col1, col2 = st.columns(2)
+
+        with col1:
+            create_lap_time_comparison(session, selected_drivers)
+            create_pit_stop_comparison(session, selected_drivers)
+
+        with col2:
+            create_sector_time_comparison(session, selected_drivers)
+
+        create_telemetry_comparison(session, selected_drivers)
+
 
 if __name__ == "__main__":
     main()
