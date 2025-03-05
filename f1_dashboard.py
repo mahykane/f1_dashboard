@@ -390,6 +390,30 @@ def fetch_races(year):
     return schedule
 
 
+def add_footer():
+    st.markdown(
+        """
+        <style>
+            .footer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                background-color: #1E1E1E;
+                color: white;
+                text-align: center;
+                padding: 10px;
+                font-size: 14px;
+                font-family: Arial, sans-serif;
+                box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+            }
+        </style>
+        <div class="footer">
+            Developed by <b>Mahy KANE</b> | © 2025 All Rights Reserved
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 
@@ -1697,6 +1721,10 @@ def main():
             create_sector_time_comparison(session, selected_drivers)
 
         create_telemetry_comparison(session, selected_drivers)
+        
+        
+# Call this function at the end of the app
+add_footer()
 
 
 if __name__ == "__main__":
