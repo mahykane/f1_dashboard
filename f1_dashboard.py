@@ -409,7 +409,7 @@ def add_footer():
             }
         </style>
         <div class="footer">
-            Developed by <b>Mahy KANE</b> | © 2025 All Rights Reserved
+            Developed by <b>KREAITIVE</b> | © 2025 All Rights Reserved
         </div>
         """,
         unsafe_allow_html=True,
@@ -1483,18 +1483,6 @@ def main():
     )
     selected_race = st.session_state["race_name"]
 
-    # Sidebar Navigation
-    # st.sidebar.title("Navigation")
-    # st.sidebar.button("📊 Telemetry", on_click=toggle_section, args=("Telemetry",))
-    # st.sidebar.button(
-    #     "⏱️ Lap & Tire Analysis", on_click=toggle_section, args=("Lap & Tire Analysis",)
-    # )
-    # st.sidebar.button(
-    #     "🔧 Pit Stops & Weather", on_click=toggle_section, args=("Pit Stops & Weather",)
-    # )
-    # st.sidebar.button(
-    #     "🏎️ Compare Drivers", on_click=toggle_section, args=("Driver Comparison",)
-    # )
 
     # Dynamically get the round number based on selected race
     round_number = fetch_round_number(year, selected_race)
@@ -1589,8 +1577,8 @@ def main():
         driver_info = get_driver_names_with_numbers(session)
         selected_driver_info = st.selectbox("Select Driver", driver_info)
         
-    
-# Hide AI features if Ollama API is unreachable
+    data_for_analysis = None
+    # Hide AI features if Ollama API is unreachable
     if st.session_state["ollama_available"]:
 
         # Sidebar: User selects graphs for AI analysis
