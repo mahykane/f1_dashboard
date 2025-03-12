@@ -516,7 +516,12 @@ def create_telemetry_plots(session, selected_driver_info):
         "It helps analyze how a driver manages speed, braking zones, and acceleration."
     )
     selected_driver = selected_driver_info.split("(")[-1].strip(")")
-    lap = session.laps.pick_driver(selected_driver).pick_fastest()
+
+    laps = session.laps.pick_driver(selected_driver)
+    selected_lap = st.slider("Select Lap", min_value=int(laps["LapNumber"].min()), max_value=int(laps["LapNumber"].max()), value=int(laps["LapNumber"].min()))
+    lap = laps[laps["LapNumber"] == selected_lap].iloc[0]
+
+
     tel = lap.get_telemetry()
 
     # Speed vs Distance
@@ -737,32 +742,6 @@ def create_position_change_analysis(session):
     st.plotly_chart(fig_position, use_container_width=True)
 
 
-def create_fuel_usage_analysis(session, selected_driver_info):
-    st.subheader("Fuel Usage Analysis")
-    selected_driver = selected_driver_info.split("(")[-1].strip(")")
-
-    # Get the fastest lap for the selected driver
-    fastest_lap = session.laps.pick_driver(selected_driver).pick_fastest()
-
-    # Get telemetry data for the fastest lap
-    tel = fastest_lap.get_telemetry()
-
-    if not tel.empty:
-        # Simulate fuel usage based on throttle and distance
-        tel["FuelUsage"] = (
-            tel["Throttle"] * tel["Distance"] / 1000
-        )  # Simulated fuel usage in liters
-
-        # Plot fuel usage over distance
-        fig_fuel_usage = px.line(
-            tel,
-            x="Distance",
-            y="FuelUsage",
-            title=f"Fuel Usage - {selected_driver_info}",
-        )
-        st.plotly_chart(fig_fuel_usage, use_container_width=True)
-    else:
-        st.write("No telemetry data available for this driver.")
 
 
 def create_weather_analysis(session):
@@ -1252,6 +1231,8 @@ def render_track_map(session, selected_driver_info):
 
     # Get the fastest lap for the selected driver
     fastest_lap = session.laps.pick_driver(selected_driver).pick_fastest()
+    
+    
     if fastest_lap is None:
         st.warning("No fastest lap data available for this driver.")
         return
@@ -1313,22 +1294,22 @@ def create_ai_analysis_data(session, selected_driver_info, selected_graphs):
 
         # Include only user-selected graphs
         if "Fastest Lap Time" in selected_graphs:
-            data_for_analysis["Fastest Lap Time (s)"] = convert_to_serializable(
+            data_for_analysis["Fastest Lap Time (s)"] += convert_to_serializable(
                 fastest_lap.LapTime.total_seconds()
             )
 
         if "Top Speed" in selected_graphs:
-            data_for_analysis["Top Speed (km/h)"] = convert_to_serializable(
+            data_for_analysis["Top Speed (km/h)"] += convert_to_serializable(
                 telemetry["Speed"].max()
             )
 
         if "Throttle Analysis" in selected_graphs:
-            data_for_analysis["Average Throttle (%)"] = convert_to_serializable(
+            data_for_analysis["Average Throttle (%)"] += convert_to_serializable(
                 telemetry["Throttle"].mean()
             )
 
         if "Sector Times" in selected_graphs:
-            data_for_analysis["Sector Times (s)"] = {
+            data_for_analysis["Sector Times (s)"] += {
                 "Sector 1": (
                     convert_to_serializable(fastest_lap.Sector1Time.total_seconds())
                     if pd.notna(fastest_lap.Sector1Time)
@@ -1347,7 +1328,7 @@ def create_ai_analysis_data(session, selected_driver_info, selected_graphs):
             }
 
         if "Pit Stop Analysis" in selected_graphs:
-            data_for_analysis["Pit Stop Analysis"] = {
+            data_for_analysis["Pit Stop Analysis"] += {
                 "Total Pit Stops": convert_to_serializable(len(pit_stops)),
                 "Average Pit Duration (s)": convert_to_serializable(
                     average_pit_duration
@@ -1355,7 +1336,7 @@ def create_ai_analysis_data(session, selected_driver_info, selected_graphs):
             }
 
         if "Telemetry Summary" in selected_graphs:
-            data_for_analysis["Telemetry Summary"] = {
+            data_for_analysis["Telemetry Summary"] += {
                 "Max RPM": (
                     convert_to_serializable(telemetry["RPM"].max())
                     if "RPM" in telemetry.columns
@@ -1429,7 +1410,7 @@ def ask_race_strategy_question(question, data):
     }
     
     # Send request to Ollama API
-    response = requests.post("http://localhost:11434/api/generate", json=payload)
+    response = requests.post("http://localhost:11434/api/chat", json=payload)
 
     if response.status_code == 200:
         return response.json().get("response", "No response received.")
@@ -1463,7 +1444,7 @@ def main():
 
     # Select Year
     st.session_state["year"] = st.sidebar.selectbox(
-        "Select Year", range(2025, 2017, -1), index=0
+        "Select Year", range(2025, 2000, -1), index=0
     )
     year = st.session_state["year"]
 
@@ -1671,7 +1652,6 @@ def main():
         create_lap_time_analysis(session)
         create_tire_usage_analysis(session)
         create_sector_time_analysis(session, selected_driver_info)
-        create_fuel_usage_analysis(session, selected_driver_info)
 
     with st.expander("🔧 Pit Stops & Weather", expanded=False):
         create_pit_stop_analysis(session)
