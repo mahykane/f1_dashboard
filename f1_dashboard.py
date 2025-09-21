@@ -882,10 +882,13 @@ def who_can_win_wdc(year, round_number):
 
 def draw_track_map(session):
     st.subheader("Track Map with Numbered Corners")
-
-    # Get the fastest lap
-    lap = session.laps.pick_fastest()
-    pos = lap.get_pos_data()
+    try:
+        # Get the fastest lap
+        lap = session.laps.pick_fastest()
+        pos = lap.get_pos_data()
+    except: 
+        print("No data")
+        return
 
     # Get circuit information
     circuit_info = session.get_circuit_info()
