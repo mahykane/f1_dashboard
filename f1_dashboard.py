@@ -1441,13 +1441,13 @@ def main():
 
     # Ensure session state is initialized
     if "year" not in st.session_state:
-        st.session_state["year"] = 2025  # Default value
+        st.session_state["year"] = 2026  # Default value
     if "race_name" not in st.session_state:
         st.session_state["race_name"] = ""
 
     # Select Year
     st.session_state["year"] = st.sidebar.selectbox(
-        "Select Year", range(2025, 2000, -1), index=0
+        "Select Year", range(2026, 2000, -1), index=0
     )
     year = st.session_state["year"]
 
